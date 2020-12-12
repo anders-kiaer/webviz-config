@@ -1,5 +1,8 @@
 <p align="center">
   <img height="150" src="https://raw.githubusercontent.com/anders-kiaer/webviz-config/dark_theme_logo/webviz_config/_docs/static/webviz-logo.svg">
+  <svg>
+  <use xlink:href="#logo"></use>
+</svg>
 </p>
 
 <h2 align="center">Democratizing Python web applications</h2>
