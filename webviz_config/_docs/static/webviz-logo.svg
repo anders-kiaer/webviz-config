@@ -15,26 +15,7 @@
    id="svg260"
    sodipodi:docname="webviz-logo.svg"
    inkscape:version="1.0.1 (0767f8302a, 2020-10-17)">
-  <sodipodi:namedview
-     pagecolor="#ffffff"
-     bordercolor="#666666"
-     borderopacity="1"
-     objecttolerance="10"
-     gridtolerance="10"
-     guidetolerance="10"
-     inkscape:pageopacity="0"
-     inkscape:pageshadow="2"
-     inkscape:window-width="1848"
-     inkscape:window-height="1163"
-     id="namedview262"
-     showgrid="false"
-     inkscape:zoom="2.3336063"
-     inkscape:cx="125.28566"
-     inkscape:cy="157.48157"
-     inkscape:window-x="72"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="svg260" />
+   <symbol id="svg_logo">
   <defs
      id="defs216">
     <linearGradient
@@ -162,7 +143,6 @@
         fill: white;
       }
     }</style>
-   <symbol id="svg_logo">
   <g
      class="text"
      stroke-width=".31404"
