@@ -162,6 +162,7 @@
         fill: white;
       }
     }</style>
+   <symbol id="svg_logo">
   <g
      class="text"
      stroke-width=".31404"
@@ -244,4 +245,5 @@
        x="9.2853899"
        y="58.746181"
        style="stroke-width:0.264583">some text</tspan></text>
+   </symbol>
 </svg>
