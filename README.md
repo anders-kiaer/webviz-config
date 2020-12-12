@@ -1,7 +1,7 @@
 <p align="center">
   <img height="150" src="https://raw.githubusercontent.com/anders-kiaer/webviz-config/dark_theme_logo/webviz_config/_docs/static/webviz-logo.svg">
   <svg>
-  <use xlink:href="https://raw.githubusercontent.com/anders-kiaer/webviz-config/dark_theme_logo/webviz_config/_docs/static/webviz-logo.svg#logo"></use>
+  <use xlink:href="https://raw.githubusercontent.com/anders-kiaer/webviz-config/dark_theme_logo/webviz_config/_docs/static/webviz-logo.svg"></use>
 </svg>
 </p>
 
