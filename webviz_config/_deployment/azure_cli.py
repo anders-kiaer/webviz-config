@@ -1,7 +1,7 @@
-# pylint: disable=invalid-sequence-index
-
+import sys
 import time
 import secrets
+import asyncio
 import pathlib
 import datetime
 import warnings
@@ -72,6 +72,13 @@ def _subscription_id(subscription_name: str = None) -> str:
             return sub.subscription_id
 
     raise ValueError(f"Could not find a subscription with name {subscription_name}")
+
+
+def _connection_string(subscription, resource_group, storage_account) -> str:
+    key = get_storage_account_access_key(subscription, resource_group, storage_account)
+    return (
+        f"DefaultEndpointsProtocol=https;AccountName={storage_account};AccountKey={key}"
+    )
 
 
 def subscriptions() -> List[str]:
@@ -215,70 +222,94 @@ def create_storage_container(
     storage_account: str,
     container: str,
 ) -> None:
-    key = get_storage_account_access_key(subscription, resource_group, storage_account)
-    connection_string = (
-        f"DefaultEndpointsProtocol=https;AccountName={storage_account};AccountKey={key}"
-    )
-    BlobServiceClient.from_connection_string(connection_string).get_container_client(
-        container
-    ).create_container()
+    BlobServiceClient.from_connection_string(
+        _connection_string(subscription, resource_group, storage_account)
+    ).get_container_client(container).create_container()
+
+
+def _upload_batch(
+    subscription,
+    resource_group,
+    storage_name: str,
+    container_name: str,
+    source_folder: pathlib.Path,
+):
+    paths_to_upload = [path for path in source_folder.rglob("*") if path.is_file()]
+
+    if sys.version_info >= (3, 7):
+        from tqdm.asyncio import tqdm
+        from azure.storage.blob.aio import ContainerClient
+
+        async def _upload_file(container_client, path, source_folder):
+            with open(path, "rb") as fh:
+                await container_client.upload_blob(
+                    name=path.relative_to(source_folder).as_posix(),
+                    data=fh,
+                    overwrite=True,
+                )
+
+        async def _upload_blob():
+            container_client = ContainerClient.from_connection_string(
+                _connection_string(subscription, resource_group, storage_name),
+                container_name,
+            )
+
+            async with container_client:
+                tasks = [
+                    asyncio.create_task(
+                        _upload_file(container_client, path, source_folder)
+                    )
+                    for path in paths_to_upload
+                ]
+
+                for task in tqdm.as_completed(
+                    tasks, bar_format="{l_bar} {bar} | Uploaded {n_fmt}/{total_fmt}"
+                ):
+                    await task
+
+        asyncio.run(_upload_blob())
+
+    else:  # Python 3.6 don't have the same rich set of features in asyncio.
+        from tqdm import tqdm
+        from azure.storage.blob import ContainerClient
+
+        container_client = ContainerClient.from_connection_string(
+            _connection_string(subscription, resource_group, storage_name),
+            container_name,
+        )
+
+        for path in tqdm(
+            paths_to_upload, bar_format="{l_bar} {bar} | Uploaded {n_fmt}/{total_fmt}"
+        ):
+            with open(path, "rb") as fh:
+                container_client.upload_blob(
+                    name=path.relative_to(source_folder).as_posix(),
+                    data=fh,
+                    overwrite=True,
+                )
 
 
 def storage_container_upload_folder(
     storage_name: str,
     container_name: str,
-    destination_folder: str,
     source_folder: pathlib.Path,
 ) -> None:
     # If the upload access was recently added, Azure documentation
     # says it can take up until five minutes before the access is
     # enabled in practice.
 
-    command_arguments = [
-        "storage",
-        "blob",
-        "upload-batch",
-        "--account-name",
-        storage_name,
-        "--destination",
-        f"{container_name}/{destination_folder}",
-        "--auth-mode",
-        "login",
-        "--source",
-        str(source_folder),
-    ]
-
     for _ in range(5):
         try:
-            _azure_cli(
-                command_arguments,
-                devnull_stderr=False,  # progress status shown in stderr by Azure CLI...
+            _upload_batch(
+                subscription,
+                resource_group,
+                storage_name,
+                container_name,
+                source_folder,
             )
             return
         except AzureHttpError:
             pass
-        except ValueError:
-            print(
-                "====================================================================\n"
-                "Ignore the 'ValueError: I/O operation on closed file' above.\n"
-                "There is currently a bug in the Azure Python CLI that hits when you\n"
-                " 1) Create a new Azure storage account.\n"
-                " 2) Upload to the new storage account in the same Python session.\n\n"
-                "We will try to upload in a subprocess.\n"
-                "===================================================================="
-            )
-
-            result = subprocess.run(  # pylint: disable=subprocess-run-check
-                ["az"] + command_arguments,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                # capture_output=True, <-- First vailable in Python 3.7
-            )
-
-            if not b"ERROR" in result.stderr:
-                # Azure CLI shows progress in stderr,
-                # i.e. even successfull runs have content in stderr
-                return
         finally:
             print("Waiting on Azure access activation... please wait.")
             time.sleep(60)
