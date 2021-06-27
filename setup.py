@@ -98,7 +98,7 @@ setup(
     ],
     extras_require={
         "tests": TESTS_REQUIRES,
-        "deployment": ["azure-cli"],
+        "deployment": ["azure-identity", "azure-mgmt-resource", "azure-mgmt-storage"],
     },
     setup_requires=["setuptools_scm~=3.2"],
     python_requires="~=3.6",
